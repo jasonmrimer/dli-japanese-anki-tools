@@ -3,6 +3,8 @@ from aqt.qt import (
     QAction,
     QCheckBox,
     QDialog,
+    QHBoxLayout,
+    QLabel,
     QLineEdit,
     QPushButton,
     QRadioButton,
@@ -191,18 +193,25 @@ def create_filtered_deck() -> None:
     deck_name_input.setPlaceholderText("Enter Filtered Deck name")
     layout.addWidget(deck_name_input)
 
-    # Tags.
+
+    # Study mode.
+    mode_buttons = create_study_mode_buttons()
+    mode_buttons[0].setChecked(True)
+
+    for button in mode_buttons:
+        layout.addWidget(button)
+
+    #Deck and Tag Panel
+    source_panel = SourcePanel()
+    layout.addWidget(source_panel)
+
+    # All Tags.
     tags = get_deck_tags()
     tag_checkboxes = create_tag_checkboxes(tags)
     tag_list = create_tag_list_widget(tag_checkboxes)
-    layout.addWidget(tag_list)
 
-    # Tag selection controls.
     select_all_button = QPushButton("Select All")
     clear_all_button = QPushButton("Clear All")
-
-    layout.addWidget(select_all_button)
-    layout.addWidget(clear_all_button)
 
     qconnect(
         select_all_button.clicked,
@@ -214,12 +223,36 @@ def create_filtered_deck() -> None:
         lambda: clear_all_tags(tag_checkboxes),
     )
 
-    # Study mode.
-    mode_buttons = create_study_mode_buttons()
-    mode_buttons[0].setChecked(True)
+    all_tags_button = QPushButton("Choose from all tags ▸")
 
-    for button in mode_buttons:
-        layout.addWidget(button)
+    all_tags_panel = QWidget()
+    all_tags_layout = QVBoxLayout()
+
+    all_tags_layout.addWidget(tag_list)
+    all_tags_layout.addWidget(select_all_button)
+    all_tags_layout.addWidget(clear_all_button)
+
+    all_tags_panel.setLayout(all_tags_layout)
+    all_tags_panel.setVisible(False)
+
+    def toggle_all_tags() -> None:
+        """Show or hide the full tag selector."""
+
+        visible = not all_tags_panel.isVisible()
+        all_tags_panel.setVisible(visible)
+
+        if visible:
+            all_tags_button.setText("Hide all tags ▾")
+        else:
+            all_tags_button.setText("Choose from all tags ▸")
+
+    qconnect(
+        all_tags_button.clicked,
+        toggle_all_tags,
+    )
+
+    layout.addWidget(all_tags_button)
+    layout.addWidget(all_tags_panel)
 
     # Create button.
     create_button = QPushButton("CREATE")
@@ -288,3 +321,80 @@ def setup() -> None:
     mw.form.menuTools.addAction(action)
 
     mw._japanese_anki_tools_action = action
+
+
+class SFJPanel(QWidget):
+    """Panel for selecting SFJ lessons."""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        layout = QVBoxLayout()
+
+        self.checkboxes: list[QCheckBox] = []
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+
+        lesson_widget = QWidget()
+        lesson_layout = QVBoxLayout()
+
+        for lesson_number in range(1, 25):
+            lesson = f"L{lesson_number:02d}"
+
+            checkbox = QCheckBox(lesson)
+            self.checkboxes.append(checkbox)
+            lesson_layout.addWidget(checkbox)
+
+        lesson_widget.setLayout(lesson_layout)
+        scroll_area.setWidget(lesson_widget)
+
+        layout.addWidget(scroll_area)
+
+        self.setLayout(layout)
+
+    def get_selected_lessons(self) -> list[str]:
+        """Return the selected SFJ lessons."""
+
+        return [
+            checkbox.text()
+            for checkbox in self.checkboxes
+            if checkbox.isChecked()
+        ]
+
+
+class SourcePanel(QWidget):
+    """Panel containing the JBC and SFJ selections."""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        layout = QHBoxLayout()
+
+        # JBC panel.
+        jbc_widget = QWidget()
+        jbc_panel = create_subpanel("JBC", jbc_widget)
+        layout.addWidget(jbc_panel)
+
+        # SFJ panel.
+        sfj_panel = SFJPanel()
+        sfj_subpanel = create_subpanel("SFJ", sfj_panel)
+        layout.addWidget(sfj_subpanel)
+
+        self.setLayout(layout)
+
+
+def create_subpanel(title: str, widget: QWidget) -> QWidget:
+    """Create a titled panel containing a widget."""
+
+    panel = QWidget()
+    layout = QVBoxLayout()
+
+    title_label = QLabel(title)
+    layout.addWidget(title_label)
+
+    layout.addWidget(widget)
+
+    panel.setLayout(layout)
+
+    return panel
