@@ -26,16 +26,18 @@ def to_search(model: FilterModel) -> str:
         for tag in model.tags
     )
 
+    deck_search = f'"deck:{SOURCE_DECK}"'
+
     if model.study_mode == "introduce":
         status_search = "(is:new OR is:learn)"
-        return f"({tag_search}) {status_search}"
+        return f"{deck_search} ({tag_search}) {status_search}"
 
     if model.study_mode == "review":
         status_search = "is:review is:due"
-        return f"({tag_search}) {status_search}"
+        return f"{deck_search} ({tag_search}) {status_search}"
 
     if model.study_mode == "cram":
-        return f"({tag_search})"
+        return f"{deck_search} ({tag_search})"
 
     raise ValueError("Select a valid study mode.")
 

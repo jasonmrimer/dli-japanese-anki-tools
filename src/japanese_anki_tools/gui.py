@@ -5,6 +5,7 @@ from aqt.qt import (
     QDialog,
     QLineEdit,
     QPushButton,
+    QRadioButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -45,37 +46,29 @@ def create_tag_checkboxes(tags: list[str]) -> list[QCheckBox]:
     return checkboxes
 
 
-def create_study_mode_checkboxes() -> list[QCheckBox]:
-    """Create checkboxes for the available study modes."""
+def create_study_mode_buttons() -> list[QRadioButton]:
+    """Create radio buttons for the available study modes."""
 
-    checkboxes: list[QCheckBox] = []
+    buttons: list[QRadioButton] = []
 
     for label, value in STUDY_MODES:
-        checkbox = QCheckBox(label)
-        checkbox.setProperty("study_mode_value", value)
-        checkboxes.append(checkbox)
+        button = QRadioButton(label)
+        button.setProperty("study_mode_value", value)
+        buttons.append(button)
 
-    return checkboxes
+    return buttons
 
 
 def get_selected_study_mode(
-    checkboxes: list[QCheckBox],
+    buttons: list[QRadioButton],
 ) -> str:
     """Return the selected study mode."""
 
-    selected = [
-        checkbox.property("study_mode_value")
-        for checkbox in checkboxes
-        if checkbox.isChecked()
-    ]
+    for button in buttons:
+        if button.isChecked():
+            return button.property("study_mode_value")
 
-    if not selected:
-        raise ValueError("Select a study mode.")
-
-    if len(selected) > 1:
-        raise ValueError("Select only one study mode.")
-
-    return selected[0]
+    raise ValueError("Select a study mode.")
 
 
 def create_tag_list_widget(
@@ -222,10 +215,11 @@ def create_filtered_deck() -> None:
     )
 
     # Study mode.
-    mode_checkboxes = create_study_mode_checkboxes()
+    mode_buttons = create_study_mode_buttons()
+    mode_buttons[0].setChecked(True)
 
-    for checkbox in mode_checkboxes:
-        layout.addWidget(checkbox)
+    for button in mode_buttons:
+        layout.addWidget(button)
 
     # Create button.
     create_button = QPushButton("CREATE")
@@ -237,7 +231,7 @@ def create_filtered_deck() -> None:
         selected_tags = get_selected_tags(tag_checkboxes)
 
         try:
-            study_mode = get_selected_study_mode(mode_checkboxes)
+            study_mode = get_selected_study_mode(mode_buttons)
         except ValueError as error:
             showInfo(str(error))
             return
