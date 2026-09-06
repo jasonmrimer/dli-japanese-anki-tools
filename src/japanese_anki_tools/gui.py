@@ -11,8 +11,13 @@ from aqt.qt import (
 )
 from aqt.utils import showInfo, qconnect
 
-from .filters import FilterModel, SOURCE_DECK, to_search
-
+from .filters import (
+    FilterModel,
+    SOURCE_DECK,
+    STUDY_MODES,
+    should_reschedule,
+    to_search,
+)
 
 def get_deck_tags() -> list[str]:
     """Return all tags used by notes in the source deck."""
@@ -38,6 +43,39 @@ def create_tag_checkboxes(tags: list[str]) -> list[QCheckBox]:
         checkboxes.append(checkbox)
 
     return checkboxes
+
+
+def create_study_mode_checkboxes() -> list[QCheckBox]:
+    """Create checkboxes for the available study modes."""
+
+    checkboxes: list[QCheckBox] = []
+
+    for label, value in STUDY_MODES:
+        checkbox = QCheckBox(label)
+        checkbox.setProperty("study_mode_value", value)
+        checkboxes.append(checkbox)
+
+    return checkboxes
+
+
+def get_selected_study_mode(
+    checkboxes: list[QCheckBox],
+) -> str:
+    """Return the selected study mode."""
+
+    selected = [
+        checkbox.property("study_mode_value")
+        for checkbox in checkboxes
+        if checkbox.isChecked()
+    ]
+
+    if not selected:
+        raise ValueError("Select a study mode.")
+
+    if len(selected) > 1:
+        raise ValueError("Select only one study mode.")
+
+    return selected[0]
 
 
 def create_tag_list_widget(
@@ -122,12 +160,16 @@ def validate_deck_name(deck_name: str) -> bool:
 def create_filtered_deck_in_anki(
     deck_name: str,
     search: str,
+    reschedule: bool,
 ) -> None:
     """Create and configure the Filtered Deck in Anki."""
 
     deck_id = mw.col.decks.new_filtered(deck_name)
 
     filtered_deck = mw.col.sched.get_or_create_filtered_deck(deck_id)
+
+    filtered_deck.config.reschedule = reschedule
+    filtered_deck.allow_empty = True
 
     filtered_deck.config.search_terms.clear()
 
@@ -179,6 +221,12 @@ def create_filtered_deck() -> None:
         lambda: clear_all_tags(tag_checkboxes),
     )
 
+    # Study mode.
+    mode_checkboxes = create_study_mode_checkboxes()
+
+    for checkbox in mode_checkboxes:
+        layout.addWidget(checkbox)
+
     # Create button.
     create_button = QPushButton("CREATE")
     layout.addWidget(create_button)
@@ -188,7 +236,16 @@ def create_filtered_deck() -> None:
     def create() -> None:
         selected_tags = get_selected_tags(tag_checkboxes)
 
-        model = FilterModel(tags=selected_tags)
+        try:
+            study_mode = get_selected_study_mode(mode_checkboxes)
+        except ValueError as error:
+            showInfo(str(error))
+            return
+
+        model = FilterModel(
+            tags=selected_tags,
+            study_mode=study_mode,
+        )
 
         try:
             search = to_search(model)
@@ -201,7 +258,13 @@ def create_filtered_deck() -> None:
         if not validate_deck_name(deck_name):
             return
 
-        create_filtered_deck_in_anki(deck_name, search)
+        reschedule = should_reschedule(study_mode)
+
+        create_filtered_deck_in_anki(
+            deck_name,
+            search,
+            reschedule,
+        )
 
         refresh_deck_browser()
 
