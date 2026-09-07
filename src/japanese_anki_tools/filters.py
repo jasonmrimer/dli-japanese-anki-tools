@@ -19,45 +19,41 @@ class FilterModel:
 
 
 def to_search(model: FilterModel) -> str:
-    if not model.sfj_lessons:
-        raise ValueError("Select at least one SFJ lesson.")
+    if model.tags:
+        search_ingredient = "(" + " OR ".join(
+            f"tag:{tag}"
+            for tag in model.tags
+        ) + ")"
 
-    if not model.tags:
-        raise ValueError("Select at least one tag.")
+    elif model.sfj_lessons:
+        sfj_search = " OR ".join(
+            f"tag:{lesson}"
+            for lesson in model.sfj_lessons
+        )
 
-    sfj_search = " OR ".join(
-        f"tag:{lesson}"
-        for lesson in model.sfj_lessons
-    )
+        search_ingredient = (
+            f'("deck:{SOURCE_DECK}::SFJ" '
+            f"({sfj_search}))"
+        )
 
-    sfj_ingredient = (
-        f'"deck:{SOURCE_DECK}::SFJ" '
-        f"({sfj_search})"
-    )
-
-    tag_search = " OR ".join(
-        f'"tag:{tag}"'
-        for tag in model.tags
-    )
-
-    deck_search = f'"deck:{SOURCE_DECK}"'
-
-    if model.study_mode == "introduce":
-        status_search = "(is:new OR is:learn)"
-    elif model.study_mode == "review":
-        status_search = "is:review is:due"
-    elif model.study_mode == "cram":
-        status_search = ""
     else:
-        raise ValueError("Select a valid study mode.")
+        raise ValueError(
+            "Select at least one SFJ lesson or tag."
+        )
 
     search_parts = [
         f'"deck:{SOURCE_DECK}"',
-        f"({sfj_ingredient})",
+        search_ingredient,
     ]
 
-    if status_search:
-        search_parts.append(status_search)
+    if model.study_mode == "introduce":
+        search_parts.append("(is:new OR is:learn)")
+    elif model.study_mode == "review":
+        search_parts.append("is:review is:due")
+    elif model.study_mode == "cram":
+        pass
+    else:
+        raise ValueError("Select a valid study mode.")
 
     return " ".join(search_parts)
 

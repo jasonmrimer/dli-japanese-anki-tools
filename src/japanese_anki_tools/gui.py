@@ -263,11 +263,7 @@ def create_filtered_deck() -> None:
 
     def create() -> None:
         selected_tags = get_selected_tags(tag_checkboxes)
-
-        if selected_tags:
-            tags = selected_tags
-        else:
-            tags = source_panel.sfj_panel.get_selected_lessons()
+        selected_sfj_lessons = source_panel.sfj_panel.get_selected_lessons()
 
         try:
             study_mode = get_selected_study_mode(mode_buttons)
@@ -276,8 +272,8 @@ def create_filtered_deck() -> None:
             return
 
         model = FilterModel(
-            sfj_lessons=source_panel.sfj_panel.get_selected_lessons(),
-            tags=tags,
+            sfj_lessons=selected_sfj_lessons,
+            tags=selected_tags,
             study_mode=study_mode,
         )
 
