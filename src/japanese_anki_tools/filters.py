@@ -13,13 +13,27 @@ STUDY_MODES = [
 
 @dataclass
 class FilterModel:
+    sfj_lessons: list[str]
     tags: list[str]
     study_mode: str
 
 
 def to_search(model: FilterModel) -> str:
+    if not model.sfj_lessons:
+        raise ValueError("Select at least one SFJ lesson.")
+
     if not model.tags:
         raise ValueError("Select at least one tag.")
+
+    sfj_search = " OR ".join(
+        f"tag:{lesson}"
+        for lesson in model.sfj_lessons
+    )
+
+    sfj_ingredient = (
+        f'"deck:{SOURCE_DECK}::SFJ" '
+        f"({sfj_search})"
+    )
 
     tag_search = " OR ".join(
         f'"tag:{tag}"'
@@ -30,16 +44,22 @@ def to_search(model: FilterModel) -> str:
 
     if model.study_mode == "introduce":
         status_search = "(is:new OR is:learn)"
-        return f"{deck_search} ({tag_search}) {status_search}"
-
-    if model.study_mode == "review":
+    elif model.study_mode == "review":
         status_search = "is:review is:due"
-        return f"{deck_search} ({tag_search}) {status_search}"
+    elif model.study_mode == "cram":
+        status_search = ""
+    else:
+        raise ValueError("Select a valid study mode.")
 
-    if model.study_mode == "cram":
-        return f"{deck_search} ({tag_search})"
+    search_parts = [
+        f'"deck:{SOURCE_DECK}"',
+        f"({sfj_ingredient})",
+    ]
 
-    raise ValueError("Select a valid study mode.")
+    if status_search:
+        search_parts.append(status_search)
+
+    return " ".join(search_parts)
 
 
 def should_reschedule(study_mode: str) -> bool:

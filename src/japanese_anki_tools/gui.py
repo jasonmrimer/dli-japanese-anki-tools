@@ -2,6 +2,7 @@ from aqt import mw
 from aqt.qt import (
     QAction,
     QCheckBox,
+    QComboBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -263,6 +264,11 @@ def create_filtered_deck() -> None:
     def create() -> None:
         selected_tags = get_selected_tags(tag_checkboxes)
 
+        if selected_tags:
+            tags = selected_tags
+        else:
+            tags = source_panel.sfj_panel.get_selected_lessons()
+
         try:
             study_mode = get_selected_study_mode(mode_buttons)
         except ValueError as error:
@@ -270,7 +276,8 @@ def create_filtered_deck() -> None:
             return
 
         model = FilterModel(
-            tags=selected_tags,
+            sfj_lessons=source_panel.sfj_panel.get_selected_lessons(),
+            tags=tags,
             study_mode=study_mode,
         )
 
@@ -333,6 +340,24 @@ class SFJPanel(QWidget):
 
         self.checkboxes: list[QCheckBox] = []
 
+        # Study through control.
+        through_layout = QHBoxLayout()
+
+        through_label = QLabel("Study through:")
+
+        self.through_combo = QComboBox()
+        self.through_combo.addItem("None", None)
+
+        for lesson_number in range(1, 25):
+            lesson = f"L{lesson_number:02d}"
+            self.through_combo.addItem(lesson, lesson_number)
+
+        through_layout.addWidget(through_label)
+        through_layout.addWidget(self.through_combo)
+
+        layout.addLayout(through_layout)
+
+        # Lesson list.
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
 
@@ -353,6 +378,21 @@ class SFJPanel(QWidget):
 
         self.setLayout(layout)
 
+        qconnect(
+            self.through_combo.currentIndexChanged,
+            self.select_through,
+        )
+
+    def select_through(self) -> None:
+        """Select all lessons through the chosen lesson."""
+
+        through = self.through_combo.currentData()
+
+        for lesson_number, checkbox in enumerate(self.checkboxes, start=1):
+            checkbox.setChecked(
+                through is not None and lesson_number <= through
+            )
+
     def get_selected_lessons(self) -> list[str]:
         """Return the selected SFJ lessons."""
 
@@ -361,7 +401,7 @@ class SFJPanel(QWidget):
             for checkbox in self.checkboxes
             if checkbox.isChecked()
         ]
-
+    
 
 class SourcePanel(QWidget):
     """Panel containing the JBC and SFJ selections."""
@@ -377,8 +417,8 @@ class SourcePanel(QWidget):
         layout.addWidget(jbc_panel)
 
         # SFJ panel.
-        sfj_panel = SFJPanel()
-        sfj_subpanel = create_subpanel("SFJ", sfj_panel)
+        self.sfj_panel = SFJPanel()
+        sfj_subpanel = create_subpanel("SFJ", self.sfj_panel)
         layout.addWidget(sfj_subpanel)
 
         self.setLayout(layout)
