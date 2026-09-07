@@ -4,6 +4,7 @@ from aqt.qt import (
     QCheckBox,
     QComboBox,
     QDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -194,7 +195,6 @@ def create_filtered_deck() -> None:
     deck_name_input.setPlaceholderText("Enter Filtered Deck name")
     layout.addWidget(deck_name_input)
 
-
     # Study mode.
     mode_buttons = create_study_mode_buttons()
     mode_buttons[0].setChecked(True)
@@ -202,67 +202,23 @@ def create_filtered_deck() -> None:
     for button in mode_buttons:
         layout.addWidget(button)
 
-    #Deck and Tag Panel
+    # Deck selection.
     source_panel = SourcePanel()
     layout.addWidget(source_panel)
 
-    # All Tags.
-    tags = get_deck_tags()
-    tag_checkboxes = create_tag_checkboxes(tags)
-    tag_list = create_tag_list_widget(tag_checkboxes)
-
-    select_all_button = QPushButton("Select All")
-    clear_all_button = QPushButton("Clear All")
-
-    qconnect(
-        select_all_button.clicked,
-        lambda: select_all_tags(tag_checkboxes),
-    )
-
-    qconnect(
-        clear_all_button.clicked,
-        lambda: clear_all_tags(tag_checkboxes),
-    )
-
-    all_tags_button = QPushButton("Choose from all tags ▸")
-
-    all_tags_panel = QWidget()
-    all_tags_layout = QVBoxLayout()
-
-    all_tags_layout.addWidget(tag_list)
-    all_tags_layout.addWidget(select_all_button)
-    all_tags_layout.addWidget(clear_all_button)
-
-    all_tags_panel.setLayout(all_tags_layout)
-    all_tags_panel.setVisible(False)
-
-    def toggle_all_tags() -> None:
-        """Show or hide the full tag selector."""
-
-        visible = not all_tags_panel.isVisible()
-        all_tags_panel.setVisible(visible)
-
-        if visible:
-            all_tags_button.setText("Hide all tags ▾")
-        else:
-            all_tags_button.setText("Choose from all tags ▸")
-
-    qconnect(
-        all_tags_button.clicked,
-        toggle_all_tags,
-    )
-
-    layout.addWidget(all_tags_button)
+    # Manual tag override.
+    all_tags_panel = AllTagsPanel()
     layout.addWidget(all_tags_panel)
 
     # Create button.
     create_button = QPushButton("CREATE")
+    style_primary_button(create_button)
     layout.addWidget(create_button)
 
     dialog.setLayout(layout)
 
     def create() -> None:
-        selected_tags = get_selected_tags(tag_checkboxes)
+        selected_tags = all_tags_panel.get_selected_tags()
         selected_sfj_lessons = source_panel.sfj_panel.get_selected_lessons()
 
         try:
@@ -326,6 +282,100 @@ def setup() -> None:
     mw._japanese_anki_tools_action = action
 
 
+class AllTagsPanel(QWidget):
+    """Panel for manually selecting tags as an override."""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.tags = get_deck_tags()
+        self.checkboxes = create_tag_checkboxes(self.tags)
+
+        layout = QVBoxLayout()
+
+        self.toggle_button = QPushButton("Choose from all tags ▸")
+        self.toggle_button.setStyleSheet(
+            """
+            QPushButton {
+                border: none;
+                background: transparent;
+                color: palette(link);
+                text-align: left;
+                padding: 4px;
+            }
+            QPushButton:hover {
+                text-decoration: underline;
+            }
+            """
+        )
+        layout.addWidget(self.toggle_button)
+
+        self.selection_panel = QFrame()
+        self.selection_panel.setFrameShape(QFrame.Shape.StyledPanel)
+
+        selection_layout = QVBoxLayout()
+
+        explanation = QLabel(
+            "<b>Override:</b> Selecting tags here replaces the "
+            "JBC/SFJ selections above."
+        )
+        explanation.setWordWrap(True)
+        selection_layout.addWidget(explanation)
+
+        tag_list = create_tag_list_widget(self.checkboxes)
+        selection_layout.addWidget(tag_list)
+
+        button_layout = QHBoxLayout()
+
+        select_all_button = QPushButton("Select All")
+        clear_all_button = QPushButton("Clear All")
+
+        button_layout.addWidget(select_all_button)
+        button_layout.addWidget(clear_all_button)
+        button_layout.addStretch()
+
+        selection_layout.addLayout(button_layout)
+
+        self.selection_panel.setLayout(selection_layout)
+        self.selection_panel.setVisible(False)
+
+        layout.addWidget(self.selection_panel)
+
+        self.setLayout(layout)
+
+        qconnect(
+            self.toggle_button.clicked,
+            self.toggle,
+        )
+
+        qconnect(
+            select_all_button.clicked,
+            lambda: select_all_tags(self.checkboxes),
+        )
+
+        qconnect(
+            clear_all_button.clicked,
+            lambda: clear_all_tags(self.checkboxes),
+        )
+
+    def toggle(self) -> None:
+        """Show or hide the manual tag selection."""
+
+        visible = not self.selection_panel.isVisible()
+
+        self.selection_panel.setVisible(visible)
+
+        if visible:
+            self.toggle_button.setText("Hide all tags ▾")
+        else:
+            self.toggle_button.setText("Choose from all tags ▸")
+
+    def get_selected_tags(self) -> list[str]:
+        """Return the manually selected tags."""
+
+        return get_selected_tags(self.checkboxes)
+
+    
 class SFJPanel(QWidget):
     """Panel for selecting SFJ lessons."""
 
@@ -434,3 +484,21 @@ def create_subpanel(title: str, widget: QWidget) -> QWidget:
     panel.setLayout(layout)
 
     return panel
+
+
+def style_primary_button(button: QPushButton) -> None:
+    """Style a button as the primary action."""
+
+    button.setStyleSheet(
+        """
+        QPushButton {
+            background-color: #0078d4;
+            color: white;
+            font-weight: bold;
+            padding: 8px 20px;
+        }
+        QPushButton:hover {
+            background-color: #106ebe;
+        }
+        """
+    )
