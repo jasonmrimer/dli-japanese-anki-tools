@@ -228,6 +228,7 @@ def create_filtered_deck() -> None:
             return
 
         model = FilterModel(
+            jbc=source_panel.jbc_checkbox.isChecked(),
             sfj_lessons=selected_sfj_lessons,
             tags=selected_tags,
             study_mode=study_mode,
@@ -459,6 +460,15 @@ class SourcePanel(QWidget):
 
         # JBC panel.
         jbc_widget = QWidget()
+        jbc_layout = QVBoxLayout()
+
+        self.jbc_checkbox = QCheckBox(
+            "Include all JBC cards"
+        )
+        jbc_layout.addWidget(self.jbc_checkbox)
+
+        jbc_widget.setLayout(jbc_layout)
+
         jbc_panel = create_subpanel("JBC", jbc_widget)
         layout.addWidget(jbc_panel)
 

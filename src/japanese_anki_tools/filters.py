@@ -13,6 +13,7 @@ STUDY_MODES = [
 
 @dataclass
 class FilterModel:
+    jbc: bool
     sfj_lessons: list[str]
     tags: list[str]
     study_mode: str
@@ -20,30 +21,39 @@ class FilterModel:
 
 def to_search(model: FilterModel) -> str:
     if model.tags:
-        search_ingredient = "(" + " OR ".join(
+        source_search = "(" + " OR ".join(
             f"tag:{tag}"
             for tag in model.tags
         ) + ")"
 
-    elif model.sfj_lessons:
-        sfj_search = " OR ".join(
-            f"tag:{lesson}"
-            for lesson in model.sfj_lessons
-        )
-
-        search_ingredient = (
-            f'("deck:{SOURCE_DECK}::SFJ" '
-            f"({sfj_search}))"
-        )
-
     else:
-        raise ValueError(
-            "Select at least one SFJ lesson or tag."
-        )
+        source_parts = []
+
+        if model.jbc:
+            source_parts.append(
+                f'"deck:{SOURCE_DECK}::JBC"'
+            )
+
+        if model.sfj_lessons:
+            sfj_search = " OR ".join(
+                f"tag:{lesson}"
+                for lesson in model.sfj_lessons
+            )
+
+            source_parts.append(
+                f'("deck:{SOURCE_DECK}::SFJ" ({sfj_search}))'
+            )
+
+        if not source_parts:
+            raise ValueError(
+                "Select at least one deck or lesson."
+            )
+
+        source_search = "(" + " OR ".join(source_parts) + ")"
 
     search_parts = [
         f'"deck:{SOURCE_DECK}"',
-        search_ingredient,
+        source_search,
     ]
 
     if model.study_mode == "introduce":
