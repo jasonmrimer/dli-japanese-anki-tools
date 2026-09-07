@@ -10,12 +10,19 @@ STUDY_MODES = [
     ("Cram", "cram"),
 ]
 
+MODALITIES = [
+    ("Vocab", "Vocab"),
+    ("Audio", "Audio"),
+    ("Image", "Image"),
+    ("Typing", "Typing"),
+]
 
 @dataclass
 class FilterModel:
     jbc: bool
     sfj_lessons: list[str]
     tags: list[str]
+    modalities: list[str]
     study_mode: str
 
 
@@ -51,15 +58,33 @@ def to_search(model: FilterModel) -> str:
 
         source_search = "(" + " OR ".join(source_parts) + ")"
 
+    if not model.modalities:
+        raise ValueError(
+            "Select at least one modality."
+        )
+
+    modality_parts = []
+
+    for modality in model.modalities:
+        if modality == "Audio":
+            modality_parts.append("(card:Audio Audio:_*)")
+        elif modality == "Image":
+            modality_parts.append("(card:Image Image:_*)")
+        else:
+            modality_parts.append(f"card:{modality}")
+
+    modality_search = "(" + " OR ".join(modality_parts) + ")"
+
     search_parts = [
         f'"deck:{SOURCE_DECK}"',
         source_search,
+        modality_search,
     ]
 
     if model.study_mode == "introduce":
         search_parts.append("(is:new OR is:learn)")
     elif model.study_mode == "review":
-        search_parts.append("is:review is:due")
+        search_parts.append("(is:learn OR is:due)")
     elif model.study_mode == "cram":
         pass
     else:

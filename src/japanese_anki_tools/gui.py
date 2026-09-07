@@ -20,6 +20,7 @@ from .filters import (
     FilterModel,
     SOURCE_DECK,
     STUDY_MODES,
+    MODALITIES,
     should_reschedule,
     to_search,
 )
@@ -202,6 +203,11 @@ def create_filtered_deck() -> None:
     for button in mode_buttons:
         layout.addWidget(button)
 
+    # Modalities.
+    modality_panel = ModalityPanel()
+    layout.addWidget(QLabel("Modalities"))
+    layout.addWidget(modality_panel)
+
     # Deck selection.
     source_panel = SourcePanel()
     layout.addWidget(source_panel)
@@ -231,6 +237,7 @@ def create_filtered_deck() -> None:
             jbc=source_panel.jbc_checkbox.isChecked(),
             sfj_lessons=selected_sfj_lessons,
             tags=selected_tags,
+            modalities=modality_panel.get_selected_modalities(),
             study_mode=study_mode,
         )
 
@@ -450,6 +457,35 @@ class SFJPanel(QWidget):
         ]
     
 
+class ModalityPanel(QWidget):
+    """Panel for selecting card modalities."""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        layout = QVBoxLayout()
+
+        self.checkboxes: list[QCheckBox] = []
+
+        for label, value in MODALITIES:
+            checkbox = QCheckBox(label)
+            checkbox.setProperty("modality_value", value)
+            checkbox.setChecked(True)
+            self.checkboxes.append(checkbox)
+            layout.addWidget(checkbox)
+
+        self.setLayout(layout)
+
+    def get_selected_modalities(self) -> list[str]:
+        """Return the selected modalities."""
+
+        return [
+            checkbox.property("modality_value")
+            for checkbox in self.checkboxes
+            if checkbox.isChecked()
+        ]
+
+    
 class SourcePanel(QWidget):
     """Panel containing the JBC and SFJ selections."""
 
