@@ -188,7 +188,7 @@ def create_filtered_deck() -> None:
     """Display the Filtered Deck creation dialog."""
 
     dialog = QDialog(mw)
-    dialog.setWindowTitle("Japanese Anki Tools")
+    dialog.setWindowTitle("DLI Tools")
 
     layout = QVBoxLayout()
 
@@ -301,7 +301,7 @@ def setup() -> None:
         mw.form.menuTools.removeAction(old_action)
         old_action.deleteLater()
 
-    action = QAction("Japanese Anki Tools", mw)
+    action = QAction("DLI Tools", mw)
     qconnect(action.triggered, create_filtered_deck)
     mw.form.menuTools.addAction(action)
 
