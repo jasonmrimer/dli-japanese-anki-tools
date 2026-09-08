@@ -1,4 +1,5 @@
 from aqt import mw
+from aqt.qt import Qt
 from aqt.qt import (
     QAction,
     QCheckBox,
@@ -196,16 +197,33 @@ def create_filtered_deck() -> None:
     deck_name_input.setPlaceholderText("Enter Filtered Deck name")
     layout.addWidget(deck_name_input)
 
-    # Study mode.
+    # Study type.
+    layout.addWidget(
+        create_section_caption(
+            "Study Type",
+            "Choose how cards should be scheduled.",
+        )
+    )
+
     mode_buttons = create_study_mode_buttons()
     mode_buttons[0].setChecked(True)
 
+    mode_layout = QHBoxLayout()
+
     for button in mode_buttons:
-        layout.addWidget(button)
+        mode_layout.addWidget(button)
+
+    mode_layout.addStretch()
+
+    layout.addLayout(mode_layout)
+    layout.addSpacing(12)
 
     # Modalities.
     modality_panel = ModalityPanel()
-    layout.addWidget(QLabel("Modalities"))
+    modalities_label = QLabel("Modalities")
+    modalities_label.setStyleSheet("font-weight: bold;")
+
+    layout.addWidget(modalities_label)
     layout.addWidget(modality_panel)
 
     # Deck selection.
@@ -260,13 +278,13 @@ def create_filtered_deck() -> None:
             reschedule,
         )
 
-        refresh_deck_browser()
-
         dialog.accept()
+
+        refresh_deck_browser()
 
         showInfo(
             f'Created Filtered Deck:\n\n"{deck_name}"\n\n'
-            f"Search:\n{search}"
+            # f"Search:\n{search}"
         )
 
     qconnect(create_button.clicked, create)
@@ -464,6 +482,8 @@ class ModalityPanel(QWidget):
         super().__init__()
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
 
         self.checkboxes: list[QCheckBox] = []
 
@@ -493,14 +513,14 @@ class SourcePanel(QWidget):
         super().__init__()
 
         layout = QHBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # JBC panel.
+       # JBC panel.
         jbc_widget = QWidget()
         jbc_layout = QVBoxLayout()
+        jbc_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.jbc_checkbox = QCheckBox(
-            "Include all JBC cards"
-        )
+        self.jbc_checkbox = QCheckBox("Include all JBC cards")
         jbc_layout.addWidget(self.jbc_checkbox)
 
         jbc_widget.setLayout(jbc_layout)
@@ -519,13 +539,17 @@ class SourcePanel(QWidget):
 def create_subpanel(title: str, widget: QWidget) -> QWidget:
     """Create a titled panel containing a widget."""
 
-    panel = QWidget()
+    panel = QFrame()
+    panel.setFrameShape(QFrame.Shape.StyledPanel)
+
     layout = QVBoxLayout()
 
     title_label = QLabel(title)
-    layout.addWidget(title_label)
+    title_label.setStyleSheet("font-weight: bold;")
 
+    layout.addWidget(title_label)
     layout.addWidget(widget)
+    layout.addStretch()
 
     panel.setLayout(layout)
 
@@ -548,3 +572,30 @@ def style_primary_button(button: QPushButton) -> None:
         }
         """
     )
+
+
+def create_section_caption(
+    title: str,
+    description: str,
+) -> QWidget:
+    """Create a section title and description."""
+
+    widget = QWidget()
+    layout = QVBoxLayout()
+    layout.setContentsMargins(0, 0, 0, 0)
+
+    title_label = QLabel(title)
+    title_label.setStyleSheet("font-weight: bold;")
+
+    description_label = QLabel(description)
+    description_label.setStyleSheet(
+        "font-size: 11px;"
+    )
+    description_label.setWordWrap(True)
+
+    layout.addWidget(title_label)
+    layout.addWidget(description_label)
+
+    widget.setLayout(layout)
+
+    return widget
